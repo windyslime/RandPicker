@@ -454,6 +454,30 @@ class Widget(QWidget):
         self.systemTrayIcon.deleteLater()
         last_result = self.student
         last_pos = self.pos()
+
+        HISTORY_FILE = "history.json"
+        try:
+            # Prepare history data for JSON serialization
+            serializable_historys = []
+            for item in historys: # Access the global historys list
+                # Ensure student is a dictionary and has name and id
+                student_data = item.get('student', {})
+                if not isinstance(student_data, dict) or                    'name' not in student_data or 'id' not in student_data:
+                    logger.warning(f"Skipping saving history item due to missing/invalid student data: {item}")
+                    continue
+
+                serializable_historys.append({
+                    "mode": item["mode"],
+                    "student": {"name": student_data["name"], "id": student_data["id"]}, # Save only name and id
+                    "time": item["time"].isoformat() if isinstance(item["time"], datetime) else str(item["time"]) # Handle if time is already string
+                })
+
+            with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+                json.dump(serializable_historys, f, ensure_ascii=False, indent=4)
+            logger.info(f"Successfully saved {len(serializable_historys)} history entries to {HISTORY_FILE}.")
+        except Exception as e:
+            logger.error(f"Failed to save history to {HISTORY_FILE}: {e}", exc_info=True)
+        
         conf.ini.write("Last", "x", last_pos.x(), "Last", "y", last_pos.y())
         self.themeListener.terminate()
         self.themeListener.deleteLater()
